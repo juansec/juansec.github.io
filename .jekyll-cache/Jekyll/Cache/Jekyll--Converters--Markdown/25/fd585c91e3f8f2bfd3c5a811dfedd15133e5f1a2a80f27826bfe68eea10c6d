@@ -1,4 +1,4 @@
-I"Y<p>This is a machine from the platform PwnTillDawn.</p>
+I"�Z<p>This is a machine from the platform PwnTillDawn.</p>
 
 <p>Check the platform by yourself and happy hacking:</p>
 
@@ -14,11 +14,13 @@
   <p>Rated as: Medium</p>
 
   <p>IP: 10.150.150.38</p>
+
+  <p>Goal: Become root and capture 4 flags: FLAG69.txt, FLAG70.txt, FLAG71.txt, and FLAG72.txt.</p>
 </blockquote>
 
 <h1 id="manual-os-fingerprinting"><a href="#header-1"></a>Manual OS fingerprinting.</h1>
 
-<p>I pinged the machine, and based on the <a href="https://subinsb.com/default-device-ttl-values/">TTL</a> I can conclude it’s a Linux box:</p>
+<p>Pinging the machine and based on the <a href="https://subinsb.com/default-device-ttl-values/">TTL</a> I can conclude it’s a Linux box:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
 └─<span class="nv">$ </span>ping <span class="nt">-c</span> 1 10.150.150.38
@@ -32,7 +34,7 @@ rtt min/avg/max/mdev <span class="o">=</span> 162.577/162.577/162.577/0.000 ms
 
 <h1 id="port-scanning"><a href="#header-1"></a>Port scanning.</h1>
 
-<p>I use two port scans, in the first one I discover all open ports. In the second I perform a nmap scan over those 
+<p>I use two port scans, in the first one I discover all open ports. In the second I perform a scan over those 
 discovered ports trying to discover the service versions and also try basic nmap enum scripts.</p>
 
 <h2 id="first-scan"><a href="#header-2"></a>First scan.</h2>
@@ -76,7 +78,7 @@ Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up
 
 </code></pre></div></div>
 
-<p>After writting that function in the .zshrc file (this is my case, because I’m using zsh), and using the source command to reaload the config, this is the output:</p>
+<p>After writting that function in my .zshrc file and using the source command to reaload the config, this is the output:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>extract allports                                                                   
 Open ports:  22,30609
@@ -172,7 +174,7 @@ Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span cl
 
 <h1 id="jenkins-code-execution"><a href="#header-1"></a>Jenkins code execution.</h1>
 
-<p>In the Script Console we can execute java code, and we can use it to execute system commands:</p>
+<p>In the Script Console page we can execute java code, and we can use it to execute system commands:</p>
 
 <p><img src="assets/jenkins_execution.png" alt="" /></p>
 
@@ -249,7 +251,7 @@ jenkins@dev1:/tmp<span class="err">$</span>
 2021/09/08 21:49:35 server: Listening on http://0.0.0.0:7171
 </code></pre></div></div>
 
-<p>And then wer fire it up as client mode on the victim machine:</p>
+<p>And then we fire it up as client mode on the victim machine:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:/tmp<span class="nv">$ </span><span class="nb">chmod</span> +x chisel<span class="p">;</span>./chisel client 10.66.69.69:7171 R:8080:127.0.0.1:8080
 2020/07/29 11:10:24 client: Connecting to ws://10.66.69.69:7171
@@ -294,7 +296,7 @@ jenkins@dev1:/tmp<span class="err">$</span>
 
 </code></pre></div></div>
 
-<p>And whit that we got the third flag:</p>
+<p>And with that we got the third flag:</p>
 
 <p><img src="assets/FLAG71.png" alt="" /></p>
 
@@ -314,9 +316,18 @@ jenkins@dev1:/tmp<span class="err">$</span>
 
 <p>And that was it.</p>
 
+<h1 id="skills-used"><a href="header-1"></a>Skills used.</h1>
+
+<ul>
+  <li>Port enumeration with <code class="language-plaintext highlighter-rouge">nmap</code>.</li>
+  <li>Login form bruteforcing with <code class="language-plaintext highlighter-rouge">hydra</code>.</li>
+  <li>Jenkins code execution.</li>
+  <li>Port forwarding with <code class="language-plaintext highlighter-rouge">chisel</code>.</li>
+  <li>Python webapp command injection.</li>
+</ul>
+
 <h1 id="final-thoughts"><a href="header-1"></a>Final thoughts.</h1>
 
-<p>Was not a very difficult machine, however the last part of the command injection was hard for me, I had to try different combination of payloads until I finally got the good one.
-Was a very complete machine which involved bruteforcing techniques, command execution in jenkins, port forwarding and python code injection.</p>
-
+<p>It was not a very difficult machine, I spent a lot of fun while doing it even though the last part of the command injection was hard for me, 
+I had to try different combination of payloads until I finally got the good one.</p>
 :ET

