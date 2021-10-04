@@ -20,7 +20,7 @@ Machine details:
 >
 > IP: 10.150.150.69
 >
-> Goal: Become root and capture 1 flag: FLAG67.txt.
+> Goal: Become admin and capture 1 flag: FLAG67.txt.
 
 # [](#header-1)Manual OS fingerprinting.
 
